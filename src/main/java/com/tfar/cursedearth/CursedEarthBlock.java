@@ -6,6 +6,7 @@ import net.minecraft.block.GrassBlock;
 import net.minecraft.entity.*;
 import net.minecraft.entity.monster.IMob;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -37,8 +38,8 @@ public class CursedEarthBlock extends GrassBlock {
   }
 
   @Override
-  public boolean onBlockActivated(BlockState p_220051_1_, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockRayTraceResult p_220051_6_) {
-    if (player.getHeldItemMainhand().isEmpty() && player.isSneaking() && !world.isRemote && hand == Hand.MAIN_HAND) {
+  public ActionResultType func_225533_a_(BlockState p_225533_1_, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockRayTraceResult p_225533_6_) {
+    if (player.getHeldItemMainhand().isEmpty() && player.isCrouching() && !world.isRemote && hand == Hand.MAIN_HAND) {
 
       ServerChunkProvider s = (ServerChunkProvider) world.getChunkProvider();
 
@@ -50,7 +51,7 @@ public class CursedEarthBlock extends GrassBlock {
       // nothing can spawn, occurs in places such as mushroom biomes
       if (entries.size() == 0) {
         player.sendMessage(new TranslationTextComponent("text.cursedearth.nospawns"));
-        return true;
+        return ActionResultType.SUCCESS;
       } else {
         for (Biome.SpawnListEntry entry : entries) {
           spawnInfo.add(new SpawnDetail(entry));
@@ -61,9 +62,9 @@ public class CursedEarthBlock extends GrassBlock {
         }
         player.sendMessage(names1);
       }
-      return true;
+      return ActionResultType.SUCCESS;
     }
-    return false;
+    return ActionResultType.FAIL;
   }
 
   public static class SpawnDetail {
@@ -77,40 +78,37 @@ public class CursedEarthBlock extends GrassBlock {
   }
 
   @Override
-  public void tick(BlockState state, World world, BlockPos pos, Random random) {
-    if (!world.isRemote) {
-      if (!world.isAreaLoaded(pos, 3))
-        return; // Forge: prevent loading unloaded chunks when checking neighbor's light and spreading
-      if (isInDaylight(world, pos) && diesInSunlight.get()) {
-        world.setBlockState(pos, Blocks.DIRT.getDefaultState());
-      } else {
-        if (world.getLight(pos.up()) <= 7 && naturallySpreads.get() && world.getBlockState(pos.up()).isAir(null,null)) {
-          BlockState blockstate = this.getDefaultState();
-          for (int i = 0; i < 4; ++i) {
-            BlockPos pos1 = pos.add(random.nextInt(3) - 1, random.nextInt(5) - 3, random.nextInt(3) - 1);
-            if (world.getBlockState(pos1).getBlock().isIn(CursedEarth.spreadable) && world.getBlockState(pos1.up()).isAir(world,pos1.up())) {
-              world.setBlockState(pos1, blockstate.with(SNOWY, world.getBlockState(pos1.up()).getBlock() == Blocks.SNOW));
-            }
+  public void func_225534_a_(BlockState state,ServerWorld world, BlockPos pos,  Random random) {
+    if (!world.isAreaLoaded(pos, 3)) return;
+    if (isInDaylight(world, pos) && diesInSunlight.get()) {
+      world.setBlockState(pos, Blocks.DIRT.getDefaultState());
+    } else {
+      if (world.getLight(pos.up()) <= 7 && naturallySpreads.get() && world.getBlockState(pos.up()).isAir(null, null)) {
+        BlockState blockstate = this.getDefaultState();
+        for (int i = 0; i < 4; ++i) {
+          BlockPos pos1 = pos.add(random.nextInt(3) - 1, random.nextInt(5) - 3, random.nextInt(3) - 1);
+          if (world.getBlockState(pos1).getBlock().isIn(CursedEarth.spreadable) && world.getBlockState(pos1.up()).isAir(world, pos1.up())) {
+            world.setBlockState(pos1, blockstate.with(SNOWY, world.getBlockState(pos1.up()).getBlock() == Blocks.SNOW));
           }
         }
       }
+    }
 
-      world.getPendingBlockTicks().scheduleTick(pos, state.getBlock(), random.nextInt(maxTickTime.get() - minTickTime.get() + 1));
-      //dont spawn in water
-      if (!world.getFluidState(pos.up()).isEmpty()) return;
-      //don't spawn in peaceful
-      if (world.getWorldInfo().getDifficulty() == Difficulty.PEACEFUL) return;
-      //mobcap used because mobs are laggy in large numbers todo: how well does this work on servers
-      long mobcount = ((ServerWorld) world).getEntities().filter(IMob.class::isInstance).count();
-      if (mobcount > mobCap.get()) return;
-      int r = spawnRadius.get();
-      if (world.getEntitiesWithinAABB(PlayerEntity.class, new AxisAlignedBB(-r, -r, -r, r, r, r)).size() > 0) return;
-      MobEntity mob = findMonsterToSpawn(world, pos.up(), random);
-      if (mob != null) {
-        mob.setPosition(pos.getX() + .5, pos.getY() + 1, pos.getZ() + .5);
-        if (!world.areCollisionShapesEmpty(mob) || !world.checkNoEntityCollision(mob)) return;
-        world.addEntity(mob);
-      }
+    world.getPendingBlockTicks().scheduleTick(pos, state.getBlock(), random.nextInt(maxTickTime.get() - minTickTime.get() + 1));
+    //dont spawn in water
+    if (!world.getFluidState(pos.up()).isEmpty()) return;
+    //don't spawn in peaceful
+    if (world.getWorldInfo().getDifficulty() == Difficulty.PEACEFUL) return;
+    //mobcap used because mobs are laggy in large numbers todo: how well does this work on servers
+    long mobcount = ((ServerWorld) world).getEntities().filter(IMob.class::isInstance).count();
+    if (mobcount > mobCap.get()) return;
+    int r = spawnRadius.get();
+    if (world.getEntitiesWithinAABB(PlayerEntity.class, new AxisAlignedBB(-r, -r, -r, r, r, r)).size() > 0) return;
+    MobEntity mob = findMonsterToSpawn(world, pos.up(), random);
+    if (mob != null) {
+      mob.setPosition(pos.getX() + .5, pos.getY() + 1, pos.getZ() + .5);
+      if (!world.func_226669_j_(mob) || !world.checkNoEntityCollision(mob,world.getBlockState(pos.up()).getShape(world,pos))) return;
+      world.addEntity(mob);
     }
   }
 
@@ -120,17 +118,12 @@ public class CursedEarthBlock extends GrassBlock {
   }
 
   @Override
-  public void grow(World world, Random random, BlockPos pos, BlockState state) {
-    //no
-  }
-
-  @Override
   public boolean canUseBonemeal(World p_180670_1_, Random p_180670_2_, BlockPos p_180670_3_, BlockState p_180670_4_) {
     return false;//no
   }
 
   public boolean isInDaylight(World world, BlockPos pos) {
-    return world.isDaytime() && world.getBrightness(pos.up()) > 0.5F && world.isSkyLightMax(pos.up());
+    return world.isDaytime() && world.getBrightness(pos.up()) > 0.5F && world.func_226660_f_(pos.up());
   }
 
   private MobEntity findMonsterToSpawn(World world, BlockPos pos, Random rand) {
@@ -151,8 +144,8 @@ public class CursedEarthBlock extends GrassBlock {
     EntityType type = entry.entityType;
     Entity ent = type.create(world);
     //cursed earth only works with hostiles
-    if (!(ent instanceof MobEntity))return null;
-    ((MobEntity)ent).onInitialSpawn(world, world.getDifficultyForLocation(pos), SpawnReason.NATURAL, null, null);
+    if (!(ent instanceof MobEntity)) return null;
+    ((MobEntity) ent).onInitialSpawn(world, world.getDifficultyForLocation(pos), SpawnReason.NATURAL, null, null);
     return (MobEntity) ent;
   }
 }

@@ -6,6 +6,8 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.RenderTypeLookup;
 import net.minecraft.client.renderer.color.BlockColors;
 import net.minecraft.client.renderer.color.IBlockColor;
 import net.minecraft.client.renderer.color.IItemColor;
@@ -32,6 +34,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.registries.ObjectHolder;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -145,7 +148,10 @@ public class CursedEarth {
   @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
   public static class Colors {
     @SubscribeEvent
-    public static void color(ModelRegistryEvent e) {
+    public static void color(FMLClientSetupEvent e) {
+
+      RenderTypeLookup.setRenderLayer(cursed_earth, RenderType.func_228641_d_());
+
       BlockColors blockColors = Minecraft.getInstance().getBlockColors();
       IBlockColor iBlockColor = (blockState, iEnviromentBlockReader, blockPos, i) -> Integer.decode(ClientConfig.color.get());
 
@@ -153,7 +159,7 @@ public class CursedEarth {
       ItemColors itemColors = Minecraft.getInstance().getItemColors();
       final IItemColor itemBlockColor = (stack, tintIndex) -> {
         final BlockState state = ((BlockItem) stack.getItem()).getBlock().getDefaultState();
-        return blockColors.getColor(state, null, null, tintIndex);
+        return blockColors.func_228054_a_(state, null, null, tintIndex);
       };
       itemColors.register(itemBlockColor, cursed_earth);
     }
@@ -164,7 +170,7 @@ public class CursedEarth {
     PlayerEntity p = e.getPlayer();
     World w = p.world;
     BlockPos pos = e.getPos();
-    if (p.isSneaking() && !w.isRemote && e.getItemStack().getItem() == Items.WITHER_ROSE && w.getBlockState(pos).getBlock() == Blocks.DIRT) {
+    if (p.isCrouching() && !w.isRemote && e.getItemStack().getItem() == Items.WITHER_ROSE && w.getBlockState(pos).getBlock() == Blocks.DIRT) {
       w.setBlockState(pos, cursed_earth.getDefaultState());
     }
   }
