@@ -24,8 +24,8 @@ import net.minecraft.tags.Tag;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.spawner.AbstractSpawner;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.ToolType;
 import net.minecraftforge.event.RegistryEvent;
@@ -56,6 +56,13 @@ public class CursedEarth {
   public static final ForgeConfigSpec SERVER_SPEC;
   public static final ClientConfig CLIENT;
   public static final ForgeConfigSpec CLIENT_SPEC;
+
+  public static boolean hook(AbstractSpawner abstractSpawner){
+    BlockPos blockpos = abstractSpawner.getSpawnerPosition();
+    return abstractSpawner.getWorld().getBlockState(abstractSpawner.getSpawnerPosition().down()).getBlock() == cursed_earth || abstractSpawner.getWorld().
+            isPlayerWithin(blockpos.getX() + 0.5D, blockpos.getY() + 0.5D, blockpos.getZ() + 0.5D, abstractSpawner.activatingRangeFromPlayer)
+    ;
+  }
 
   static {
     final Pair<ServerConfig, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(ServerConfig::new);

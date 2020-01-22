@@ -100,7 +100,7 @@ public class CursedEarthBlock extends GrassBlock {
     //don't spawn in peaceful
     if (world.getWorldInfo().getDifficulty() == Difficulty.PEACEFUL) return;
     //mobcap used because mobs are laggy in large numbers todo: how well does this work on servers
-    long mobcount = ((ServerWorld) world).getEntities().filter(IMob.class::isInstance).count();
+    long mobcount = world.getEntities().filter(IMob.class::isInstance).count();
     if (mobcount > mobCap.get()) return;
     int r = spawnRadius.get();
     if (world.getEntitiesWithinAABB(PlayerEntity.class, new AxisAlignedBB(-r, -r, -r, r, r, r)).size() > 0) return;
